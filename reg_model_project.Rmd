@@ -1,0 +1,133 @@
+---
+title: "Modeling and prediction for movies"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+library(statsr)
+```
+
+### Load data
+
+Make sure your data and R Markdown files are in the same directory. When loaded
+your data file will be called `movies`. Delete this note when before you submit 
+your work. 
+
+```{r load-data}
+load("movies.Rdata")
+```
+
+
+
+* * *
+
+## Part 1: Data
+
+The Movies Dataset is a a random sample of movies with information from Rotten Tomatoes and IMDB designed to learn attributes responsible for making a movie popular.
+	Movies data set is an observational study where the independent variables are not under the control of the researcher. The data set is a random sample of 651 movies from all the movies available in the imdb and Rotten tomatoes database.
+<h5><u>GENERALIZABILTY:</u></h5>
+Generalizability by definition involves the extent to which the results of a study can be applied beyond the sample to the larger population.BRFSS used random Sampling and It can be generalized to all movies in the database.
+<h5><u>CAUSALITY:</u></h5>
+Association does not mean causation. Movies dataset is an observational study dataset to measure something new about movies. Establishing causation by ruling out the possibility of any lurking variable, or by assuming that individuals differ only with respect to the values of the explanatory variable is difficult. Due to the lurking variables, it is not preferable to establish causation in an observational study.
+
+
+* * *
+
+## Part 2: Research question
+I have thought of 2 research questions from the Movies dataset.
+
+Is there any association between a movie being boxoffice hit (top200_box) and variables title_type,genre,runtime,mpaa_rating,imdb ratings,rotten tomatoes score and oscar nominations?
+
+Is there any relation between a movie admired by audience(audience score) and variables title_type,genre,runtime,mpaa_rating,imdb ratings,rotten tomatoes score,critics ratings and oscar nominations?
+* * *
+
+## Part 3: Exploratory data analysis
+
+Plotting Relation between variables in the movies dataset.
+```{r}
+ df <- data.frame(movies$title_type,movies$top200_box)
+ggplot(df, aes(movies$title_type, ..count..)) + geom_bar(aes(fill = movies$top200_box), position = "dodge")
+
+ggplot(movies,aes(movies$imdb_rating,movies$top200_box))+geom_point()
+
+
+ ggplot(movies,aes(movies$imdb_rating,movies$audience_score))+geom_point()
+ 
+ 
+ ggplot(movies,aes(movies$critics_score,movies$audience_score))+geom_point()
+ 
+ ggplot(movies,aes(movies$genre,movies$audience_score))+geom_jitter()+theme(axis.text=element_text(size=5,face="bold"),axis.title=element_text(size=10,face="bold"))
+ 
+ ggplot(movies,aes(movies$genre,movies$audience_score))+geom_jitter()+theme(axis.text=element_text(size=5,face="bold"),axis.title=element_text(size=10,face="bold"))
+ 
+```
+
+Cleaning The Movies Dataset to check and omit all N/A rows which might cause a faulty prediction.
+
+
+```{r}
+
+count=0
+count=ifelse(is.na(movies)==TRUE,count+1,count)
+sum(count)
+
+movies_new<-na.omit(movies)
+count=0
+count=ifelse(is.na(movies_new)==TRUE,count+1,count)
+sum(count)
+
+```
+
+
+* * *
+
+## Part 4: Modeling
+As per the first reseasrch question ,I have used backward selection method to eliminate the highest p-value and retain the best possible Adjusted R-Squared.
+But as the top box office is a categorical vairable with 2 values "yes" and "no",Decision trees is the best possible Data mining Model But to build a linear regression model we have change it to numeric with as.numeric function in R which converts Yes =2 and No=1 (For Simplicity I subtracted with 1)
+
+```{r}
+
+score<-as.numeric(movies_new$top200_box)-1
+m_full <- lm(score ~  genre + runtime + mpaa_rating +as.factor(thtr_rel_month) + critics_rating + audience_rating , data = movies_new)
+summary(m_full)
+
+
+
+
+```
+
+For the second research question,I have used backward elimination method by eliminating the highest p-values and retaining the best adjusted R-squared
+```{r}
+m_audienceScore <- lm(audience_score ~ genre + runtime + imdb_rating + 
+    critics_rating + best_actress_win +best_pic_nom+studio , data = movies_new)
+summary(m_audienceScore)
+
+```
+
+
+* * *
+
+## Part 5: Prediction
+
+```{r}
+newMovies<-data.frame(genre="Horror",runtime=90,imdb_rating=7.1,critics_rating="Fresh",best_actress_win="yes",best_pic_nom="no",studio="Paramount Home Video")
+ 
+predict(m_audienceScore,newMovies)
+```
+
+* * *
+
+## Part 6: Conclusion
+We can conclude that for the first research question,the R-squared shows a very weak association between a movie being boxoffice hit (top200_box) and variables title_type,genre,runtime,mpaa_rating,release month and critics ratings.
+Whereas For the Second research question ,The R-squared predicts audience 
+score with a strong association between a movie admired by audience(audience score) and variables title_type,genre,runtime ,imdb ratings ,critics ratings,studio and oscar nominations
